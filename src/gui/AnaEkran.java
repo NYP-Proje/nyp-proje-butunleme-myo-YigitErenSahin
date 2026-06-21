@@ -16,14 +16,12 @@ public class AnaEkran extends JFrame {
     private String aktifKullanici;
     private String aktifRol;
     private Connection globalConn;
-    private boolean isAdmin; // YENİLİK: Admin yetki kontrolcüsü
+    private boolean isAdmin;
 
     public AnaEkran(String kullaniciAdi, String rol) {
         this.aktifKullanici = kullaniciAdi;
         this.aktifRol = rol;
         this.globalConn = VeritabaniBaglantisi.baglan();
-
-        // Eğer giriş yapan kişi "admin" ise tüm yetkileri açıyoruz!
         this.isAdmin = aktifKullanici.equalsIgnoreCase("admin");
 
         setTitle(isAdmin ? "Açık Artırma Sistemi - YÖNETİCİ PANELİ" : "Açık Artırma Sistemi - Yönetim Paneli");
@@ -36,7 +34,7 @@ public class AnaEkran extends JFrame {
 
         // --- SOL MENÜ ---
         JPanel solMenu = new JPanel(new BorderLayout());
-        solMenu.setBackground(isAdmin ? new Color(44, 62, 80) : new Color(44, 62, 80));
+        solMenu.setBackground(new Color(44, 62, 80));
         solMenu.setPreferredSize(new Dimension(250, 0));
         solMenu.setBorder(new EmptyBorder(30, 20, 30, 20));
 
@@ -48,7 +46,7 @@ public class AnaEkran extends JFrame {
 
         JLabel lblKullaniciAd = new JLabel("@" + aktifKullanici, SwingConstants.CENTER);
         lblKullaniciAd.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblKullaniciAd.setForeground(isAdmin ? new Color(241, 196, 15) : Color.WHITE); // Adminse altın sarısı
+        lblKullaniciAd.setForeground(isAdmin ? new Color(241, 196, 15) : Color.WHITE);
 
         JLabel lblRol = new JLabel(isAdmin ? "SİSTEM YÖNETİCİSİ" : aktifRol, SwingConstants.CENTER);
         lblRol.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -69,11 +67,10 @@ public class AnaEkran extends JFrame {
         btnProfilim.setFocusPainted(false);
         btnProfilim.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // YENİLİK: ADMİN İÇİN ÖZEL MENÜ BUTONU
         if (isAdmin) {
-            btnProfilim.setText("🛠️ Kullanıcı Banla / Sil");
-            btnProfilim.setBackground(new Color(155, 89, 182)); // Yetkili Mor Rengi
-            btnProfilim.addActionListener(e -> kullaniciYonetiminiAc());
+            btnProfilim.setText("🛠️ Gelişmiş Denetim Masası");
+            btnProfilim.setBackground(new Color(155, 89, 182));
+            btnProfilim.addActionListener(e -> new AdminYonetimPaneli(this).setVisible(true));
         } else if (aktifRol.equals("ALICI")) {
             btnProfilim.setText("💼 Koleksiyonum");
             btnProfilim.setBackground(new Color(52, 152, 219));
@@ -107,7 +104,7 @@ public class AnaEkran extends JFrame {
             dispose();
         });
 
-        if(!isAdmin) altMenuPaneli.add(btnHesapSil); // Admin kendini silemesin diye gizledik
+        if(!isAdmin) altMenuPaneli.add(btnHesapSil);
         altMenuPaneli.add(btnCikis);
         solMenu.add(altMenuPaneli, BorderLayout.SOUTH);
         anaPanel.add(solMenu, BorderLayout.WEST);
@@ -147,7 +144,6 @@ public class AnaEkran extends JFrame {
         JButton btnTeklifVer = createStyledButton("Teklif Ver", new Color(241, 196, 15));
         btnTeklifVer.setForeground(Color.BLACK);
 
-        // YENİLİK: ADMİN BUTONLARI (Satıcı menüsü yerine Admin silme butonu)
         if (isAdmin) {
             JButton btnZorlaSil = createStyledButton("🚨 İlanı Kaldır (Admin)", new Color(192, 57, 43));
             btnZorlaSil.addActionListener(e -> adminUrunSil());
@@ -166,8 +162,6 @@ public class AnaEkran extends JFrame {
             aksiyonPanel.add(btnUrunEkle);
         }
 
-        // Admin teklif vermesin, sadece yönetsin istiyorsan burayı if(!isAdmin) yapabilirsin.
-        // Ancak admin de teklif verebilsin diye açık bıraktık.
         aksiyonPanel.add(btnTeklifVer);
         aksiyonPanel.add(btnYenile);
         sagIcerik.add(aksiyonPanel, BorderLayout.SOUTH);
@@ -197,7 +191,6 @@ public class AnaEkran extends JFrame {
         new javax.swing.Timer(1000, event -> urunleriVeritabanindanGetir()).start();
     }
 
-    // YENİLİK: ADMİN İÇİN ZORLA İLAN SİLME MOTORU (Kiminki olduğuna bakmaz, şak diye siler)
     private void adminUrunSil() {
         int seciliSatir = urunTablosu.getSelectedRow();
         if (seciliSatir == -1) {
@@ -207,51 +200,13 @@ public class AnaEkran extends JFrame {
         int urunId = (int) tabloModeli.getValueAt(seciliSatir, 0);
         String urunAdi = (String) tabloModeli.getValueAt(seciliSatir, 1);
 
-        int onay = JOptionPane.showConfirmDialog(this, "YÖNETİCİ YETKİSİ:\n'" + urunAdi + "' adlı ilanı zorla silmek istiyor musunuz?", "Admin İlan Kaldır", JOptionPane.YES_NO_OPTION);
-        if(onay == JOptionPane.YES_OPTION) {
+        if(JOptionPane.showConfirmDialog(this, "🚨 '" + urunAdi + "' adlı ilanı zorla silmek istiyor musunuz?", "Admin İlan Kaldır", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
             try (PreparedStatement pstmt = globalConn.prepareStatement("DELETE FROM Urunler WHERE id = ?")) {
                 pstmt.setInt(1, urunId);
                 pstmt.executeUpdate();
-                JOptionPane.showMessageDialog(this, "İlan sistemden kalıcı olarak kaldırıldı.");
+                JOptionPane.showMessageDialog(this, "İlan sistemden kaldırıldı.");
                 urunleriVeritabanindanGetir();
             } catch(Exception ex) {}
-        }
-    }
-
-    // YENİLİK: ADMİN İÇİN KULLANICI BANLAMA/SİLME MOTORU
-    private void kullaniciYonetiminiAc() {
-        String silinecekKullanici = JOptionPane.showInputDialog(this, "Sistemden uzaklaştırmak (banlamak) istediğiniz kullanıcının adını girin:\n(Dikkat: Bu kişinin açtığı tüm ilanlar da silinecektir!)");
-
-        if (silinecekKullanici != null && !silinecekKullanici.trim().isEmpty()) {
-            if (silinecekKullanici.equalsIgnoreCase("admin")) {
-                JOptionPane.showMessageDialog(this, "Hata: Admin kendi kendini silemez!");
-                return;
-            }
-
-            try {
-                // Adım 1: Kullanıcının açtığı tüm ilanları sil (Öksüz ilan kalmasın diye)
-                String urunSilSql = "DELETE FROM Urunler WHERE satici_id = (SELECT id FROM Kullanicilar WHERE kullanici_adi = ?)";
-                try (PreparedStatement pstmtUrun = globalConn.prepareStatement(urunSilSql)) {
-                    pstmtUrun.setString(1, silinecekKullanici);
-                    pstmtUrun.executeUpdate();
-                }
-
-                // Adım 2: Kullanıcının kendisini sil
-                String kulSilSql = "DELETE FROM Kullanicilar WHERE kullanici_adi = ?";
-                try (PreparedStatement pstmtKul = globalConn.prepareStatement(kulSilSql)) {
-                    pstmtKul.setString(1, silinecekKullanici);
-                    int etkilenen = pstmtKul.executeUpdate();
-
-                    if (etkilenen > 0) {
-                        JOptionPane.showMessageDialog(this, "✅ @" + silinecekKullanici + " kullanıcısı ve tüm ilanları sistemden kalıcı olarak silindi!");
-                        urunleriVeritabanindanGetir();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "Böyle bir kullanıcı adı sistemde bulunamadı!");
-                    }
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Hata: " + ex.getMessage());
-            }
         }
     }
 
@@ -301,7 +256,7 @@ public class AnaEkran extends JFrame {
         }
     }
 
-    private void urunleriVeritabanindanGetir() {
+    public void urunleriVeritabanindanGetir() {
         if(globalConn == null) return;
         int seciliSatir = urunTablosu.getSelectedRow();
         int seciliUrunId = -1;
@@ -392,5 +347,220 @@ public class AnaEkran extends JFrame {
         btn.setFocusPainted(false);
         btn.setBorder(new EmptyBorder(10, 20, 10, 20));
         return btn;
+    }
+
+    // =========================================================================
+    // YENİLİK: GELİŞMİŞ ADMİN DENETİM MASASI PANELİ (INNER CLASS)
+    // =========================================================================
+    private class AdminYonetimPaneli extends JDialog {
+        private JTable kullanıcıTablosu;
+        private DefaultTableModel kulModel;
+        private JTextArea txtDetayAlan;
+
+        public AdminYonetimPaneli(JFrame anaPencere) {
+            super(anaPencere, "Merkezi Sistem Denetim Masası (Admin)", true);
+            setSize(850, 600);
+            setLocationRelativeTo(anaPencere);
+            setLayout(new BorderLayout(15, 15));
+
+            // Üst Başlık Panel
+            JPanel pnlBaslik = new JPanel(new BorderLayout());
+            pnlBaslik.setBackground(new Color(155, 89, 182));
+            pnlBaslik.setBorder(new EmptyBorder(15, 20, 15, 20));
+            JLabel lblBaslik = new JLabel("Sistemdeki Tüm Kullanıcılar ve Canlı Hareketleri", SwingConstants.CENTER);
+            lblBaslik.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            lblBaslik.setForeground(Color.WHITE);
+            pnlBaslik.add(lblBaslik, BorderLayout.CENTER);
+            add(pnlBaslik, BorderLayout.NORTH);
+
+            // Orta Kısım SplitPane (Sol: Tablo, Sağ: İstihbarat/Detay Alanı)
+            kulModel = new DefaultTableModel(new String[]{"ID", "Kullanıcı Adı", "Sistem Rolü"}, 0){
+                @Override
+                public boolean isCellEditable(int r, int c) { return false; }
+            };
+            kullanıcıTablosu = new JTable(kulModel);
+            kullanıcıTablosu.setRowHeight(30);
+            kullanıcıTablosu.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+            // Kullanıcı seçildiğinde hareketlerini anlık dökme motoru
+            kullanıcıTablosu.getSelectionModel().addListSelectionListener(e -> {
+                if(!e.getValueIsAdjusting()) kullanıcıGecmisiniYukle();
+            });
+
+            JScrollPane scrSol = new JScrollPane(kullanıcıTablosu);
+            scrSol.setPreferredSize(new Dimension(450, 0));
+
+            txtDetayAlan = new JTextArea();
+            txtDetayAlan.setFont(new Font("Consolas", Font.PLAIN, 13));
+            txtDetayAlan.setEditable(false);
+            txtDetayAlan.setBorder(new EmptyBorder(10, 10, 10, 10));
+            txtDetayAlan.setBackground(new Color(248, 249, 250));
+            JScrollPane scrSag = new JScrollPane(txtDetayAlan);
+            scrSag.setBorder(BorderFactory.createTitledBorder("🕵️ Seçilen Kullanıcının Canlı Geçmişi"));
+
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrSol, scrSag);
+            splitPane.setDividerLocation(420);
+            add(splitPane, BorderLayout.CENTER);
+
+            // Alt Aksiyon Butonları
+            JPanel pnlButonlar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
+
+            JButton btnGuncelle = new JButton("✏️ Kullanıcı Adı Düzelt");
+            btnGuncelle.setBackground(new Color(52, 152, 219));
+            btnGuncelle.setForeground(Color.WHITE);
+            btnGuncelle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            btnGuncelle.addActionListener(e -> kullaniciAdiniDuzelt());
+
+            JButton btnBanla = new JButton("🚨 Kullanıcıyı Sistemden Banla");
+            btnBanla.setBackground(new Color(192, 57, 43));
+            btnBanla.setForeground(Color.WHITE);
+            btnBanla.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            btnBanla.addActionListener(e -> kullaniciBanla());
+
+            pnlButonlar.add(btnGuncelle);
+            pnlButonlar.add(btnBanla);
+            add(pnlButonlar, BorderLayout.SOUTH);
+
+            kullanicilariListele();
+        }
+
+        private void kullanicilariListele() {
+            kulModel.setRowCount(0);
+            String sql = "SELECT id, kullanici_adi, rol FROM Kullanicilar WHERE kullanici_adi != 'admin'";
+            try (PreparedStatement pstmt = globalConn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                while(rs.next()) {
+                    kulModel.addRow(new Object[]{rs.getInt("id"), rs.getString("kullanici_adi"), rs.getString("rol")});
+                }
+            } catch(Exception ex){}
+        }
+
+        private void kullanıcıGecmisiniYukle() {
+            int satir = kullanıcıTablosu.getSelectedRow();
+            if(satir == -1) {
+                txtDetayAlan.setText("");
+                return;
+            }
+            int uid = (int) kulModel.getValueAt(satir, 0);
+            String kadi = (String) kulModel.getValueAt(satir, 1);
+
+            StringBuilder rapor = new StringBuilder();
+            rapor.append("=== KULLANICI ETKİNLİK RAPORU ===\n");
+            rapor.append("Hedef: @").append(kadi).append(" (ID: ").append(uid).append(")\n\n");
+
+            // 1. Eklediği İlanlar
+            rapor.append("📦 Açtığı İlanlar:\n");
+            String sqlIlan = "SELECT id, urun_adi, mevcut_fiyat, durum FROM Urunler WHERE satici_id = ?";
+            try (PreparedStatement pstmt = globalConn.prepareStatement(sqlIlan)) {
+                pstmt.setInt(1, uid);
+                ResultSet rs = pstmt.executeQuery();
+                boolean buldu = false;
+                while(rs.next()) {
+                    buldu = true;
+                    rapor.append(" - ID: ").append(rs.getInt("id"))
+                            .append(" | ").append(rs.getString("urun_adi"))
+                            .append(" (").append(rs.getDouble("mevcut_fiyat")).append(" ₺) [")
+                            .append(rs.getString("durum")).append("]\n");
+                }
+                if(!buldu) rapor.append(" - Henüz ilan açmamış.\n");
+            } catch(Exception ex){}
+
+            // 2. Kazandığı Ürünler
+            rapor.append("\n💼 Satın Aldığı/Kazandığı Ürünler:\n");
+            String sqlKazan = "SELECT id, urun_adi, mevcut_fiyat FROM Urunler WHERE son_teklif_veren = ? AND durum = 'KAPANDI'";
+            try (PreparedStatement pstmt = globalConn.prepareStatement(sqlKazan)) {
+                pstmt.setString(1, kadi);
+                ResultSet rs = pstmt.executeQuery();
+                boolean buldu = false;
+                while(rs.next()) {
+                    buldu = true;
+                    rapor.append(" - ").append(rs.getString("urun_adi")).append(" (").append(rs.getDouble("mevcut_fiyat")).append(" ₺)\n");
+                }
+                if(!buldu) rapor.append(" - Henüz kazandığı bir ilan yok.\n");
+            } catch(Exception ex){}
+
+            // 3. Verdiği Teklif Hareketi
+            rapor.append("\n💬 Verdiği Son Teklif Hareketleri:\n");
+            String sqlTeklif = "SELECT id, urun_adi, mevcut_fiyat, son_teklif_veren FROM Urunler WHERE son_teklif_veren = ?";
+            try (PreparedStatement pstmt = globalConn.prepareStatement(sqlTeklif)) {
+                pstmt.setString(1, kadi);
+                ResultSet rs = pstmt.executeQuery();
+                boolean buldu = false;
+                while(rs.next()) {
+                    buldu = true;
+                    rapor.append(" - ").append(rs.getString("urun_adi")).append(" ilanına en son lider teklifi o verdi! (").append(rs.getDouble("mevcut_fiyat")).append(" ₺)\n");
+                }
+                if(!buldu) rapor.append(" - Aktif lider teklifi bulunmuyor.\n");
+            } catch(Exception ex){}
+
+            txtDetayAlan.setText(rapor.toString());
+        }
+
+        private void kullaniciAdiniDuzelt() {
+            int satir = kullanıcıTablosu.getSelectedRow();
+            if(satir == -1) {
+                JOptionPane.showMessageDialog(this, "Lütfen ismini düzeltmek istediğiniz kullanıcıyı seçin!");
+                return;
+            }
+            int uid = (int) kulModel.getValueAt(satir, 0);
+            String eskiAd = (String) kulModel.getValueAt(satir, 1);
+
+            String yeniAd = JOptionPane.showInputDialog(this, "@" + eskiAd + " kullanıcısı için yeni ve uygun bir isim girin:", eskiAd);
+            if(yeniAd != null && !yeniAd.trim().isEmpty()) {
+                try {
+                    // Kullanıcılar tablosunu güncelle
+                    String sql = "UPDATE Kullanicilar SET kullanici_adi = ? WHERE id = ?";
+                    try (PreparedStatement pstmt = globalConn.prepareStatement(sql)) {
+                        pstmt.setString(1, yeniAd.trim());
+                        pstmt.setInt(2, uid);
+                        pstmt.executeUpdate();
+                    }
+                    // Ürünler tablosundaki lider teklif veren ismini de güncelle ki sistem kırılmasın
+                    String sqlUrun = "UPDATE Urunler SET son_teklif_veren = ? WHERE son_teklif_veren = ?";
+                    try (PreparedStatement pstmt2 = globalConn.prepareStatement(sqlUrun)) {
+                        pstmt2.setString(1, yeniAd.trim());
+                        pstmt2.setString(2, eskiAd);
+                        pstmt2.executeUpdate();
+                    }
+
+                    JOptionPane.showMessageDialog(this, "Kullanıcı adı başarıyla güncellendi!");
+                    kullanicilariListele();
+                    urunleriVeritabanindanGetir();
+                } catch(Exception ex){
+                    JOptionPane.showMessageDialog(this, "Hata: " + ex.getMessage());
+                }
+            }
+        }
+
+        private void kullaniciBanla() {
+            int satir = kullanıcıTablosu.getSelectedRow();
+            if(satir == -1) {
+                JOptionPane.showMessageDialog(this, "Lütfen banlamak istediğiniz kullanıcıyı seçin!");
+                return;
+            }
+            int uid = (int) kulModel.getValueAt(satir, 0);
+            String kadi = (String) kulModel.getValueAt(satir, 1);
+
+            int onay = JOptionPane.showConfirmDialog(this, "🚨 @" + kadi + " kullanıcısını ve ona ait tüm ilanları silerek sistemden tamamen banlamak istiyor musunuz?", "Kullanıcı Banlama", JOptionPane.YES_NO_OPTION);
+            if(onay == JOptionPane.YES_OPTION) {
+                try {
+                    // Adım 1: Kullanıcının açtığı ilanları sil
+                    try (PreparedStatement p1 = globalConn.prepareStatement("DELETE FROM Urunler WHERE satici_id = ?")) {
+                        p1.setInt(1, uid);
+                        p1.executeUpdate();
+                    }
+                    // Adım 2: Kullanıcıyı sil
+                    try (PreparedStatement p2 = globalConn.prepareStatement("DELETE FROM Kullanicilar WHERE id = ?")) {
+                        p2.setInt(1, uid);
+                        p2.executeUpdate();
+                    }
+
+                    JOptionPane.showMessageDialog(this, "Kullanıcı sistemden kalıcı olarak banlandı.");
+                    kullanicilariListele();
+                    txtDetayAlan.setText("");
+                    urunleriVeritabanindanGetir();
+                } catch(Exception ex){}
+            }
+        }
     }
 }

@@ -93,12 +93,12 @@ public class AnaEkran extends JFrame {
         btnHesapSil.setFocusPainted(false);
         btnHesapSil.addActionListener(e -> hesabiSil());
 
-        JButton btnCikis = new JButton("Pencereyi Kapat"); // Çıkış yap yerine pencere kapat dedik (çoklu hesap testi için)
+        JButton btnCikis = new JButton("Pencereyi Kapat");
         btnCikis.setBackground(new Color(231, 76, 60));
         btnCikis.setForeground(Color.WHITE);
         btnCikis.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnCikis.setFocusPainted(false);
-        btnCikis.addActionListener(e -> dispose()); // Sadece bu kullanıcının ekranı kapanır
+        btnCikis.addActionListener(e -> dispose());
 
         if(!isAdmin) altMenuPaneli.add(btnHesapSil);
         altMenuPaneli.add(btnCikis);
@@ -165,7 +165,7 @@ public class AnaEkran extends JFrame {
 
         btnYenile.addActionListener(e -> urunleriVeritabanindanGetir());
 
-        // YENİLİK: SATICI VE KENDİ İLANI TEKLİF ENGELİ!
+        // --- GÜNCELLENEN TEKLİF VERME MOTORU ---
         btnTeklifVer.addActionListener(e -> {
             int seciliSatir = urunTablosu.getSelectedRow();
             if (seciliSatir == -1) {
@@ -173,14 +173,17 @@ public class AnaEkran extends JFrame {
                 return;
             }
 
+            // 1. Kural: Kendi ilanına teklif veremez (Satıcı diğer ilanlara verebilir)
             String ilanSahibi = (String) tabloModeli.getValueAt(seciliSatir, 3);
             if (ilanSahibi.equals("@" + aktifKullanici)) {
                 JOptionPane.showMessageDialog(this, "Güvenlik Politikası: Kendi açtığınız ilana teklif veremezsiniz!");
                 return;
             }
 
-            if (aktifRol.equals("SATICI") && !isAdmin) {
-                JOptionPane.showMessageDialog(this, "Yetki Sınırı: Satıcı rolündeki kullanıcılar açık artırmalara katılamaz, sadece ilan açabilir!");
+            // 2. Kural: En yüksek teklif zaten bu kullanıcıdaysa tekrar veremesin
+            String sonTeklifVeren = (String) tabloModeli.getValueAt(seciliSatir, 5);
+            if (sonTeklifVeren != null && sonTeklifVeren.equals(aktifKullanici)) {
+                JOptionPane.showMessageDialog(this, "Uyarı: Bu üründe zaten en yüksek teklif sizde! Başka biri teklif artırana kadar yeni teklif veremezsiniz.");
                 return;
             }
 
@@ -189,6 +192,7 @@ public class AnaEkran extends JFrame {
                 JOptionPane.showMessageDialog(this, "Süresi bitmiş bir ürüne teklif veremezsiniz!");
                 return;
             }
+
             int urunId = (int) tabloModeli.getValueAt(seciliSatir, 0);
             String urunAdi = (String) tabloModeli.getValueAt(seciliSatir, 1);
             String fiyatMetni = (String) tabloModeli.getValueAt(seciliSatir, 4);
@@ -202,10 +206,7 @@ public class AnaEkran extends JFrame {
 
     private void adminUrunSil() {
         int seciliSatir = urunTablosu.getSelectedRow();
-        if (seciliSatir == -1) {
-            JOptionPane.showMessageDialog(this, "Lütfen silmek istediğiniz sakıncalı ilanı seçin!");
-            return;
-        }
+        if (seciliSatir == -1) return;
         int urunId = (int) tabloModeli.getValueAt(seciliSatir, 0);
         String urunAdi = (String) tabloModeli.getValueAt(seciliSatir, 1);
 
@@ -357,9 +358,6 @@ public class AnaEkran extends JFrame {
         return btn;
     }
 
-    // =========================================================================
-    // GELİŞMİŞ ADMİN DENETİM MASASI PANELİ (INNER CLASS)
-    // =========================================================================
     private class AdminYonetimPaneli extends JDialog {
         private JTable kullanıcıTablosu;
         private DefaultTableModel kulModel;

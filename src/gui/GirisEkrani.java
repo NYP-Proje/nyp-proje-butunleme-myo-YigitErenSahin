@@ -5,8 +5,6 @@ import database.VeritabaniBaglantisi;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,97 +12,112 @@ import java.sql.ResultSet;
 public class GirisEkrani extends JFrame {
     private JTextField txtKullaniciAdi;
     private JPasswordField txtSifre;
-    private JButton btnGiris;
-    private JButton btnKayitOl;
 
     public GirisEkrani() {
-        setTitle("Açık Artırma - Giriş");
-        setSize(400, 300);
+        setTitle("Açık Artırma Sistemi - Giriş");
+        setSize(400, 480); // Butonlar rahat sığsın diye biraz uzattık
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel anaPanel = new JPanel(new BorderLayout());
-        anaPanel.setBackground(new Color(245, 245, 245));
-        anaPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        JPanel anaPanel = new JPanel(new BorderLayout(10, 20));
+        anaPanel.setBorder(new EmptyBorder(30, 30, 30, 30));
+        anaPanel.setBackground(Color.WHITE);
         setContentPane(anaPanel);
 
-        JLabel lblBaslik = new JLabel("Hoş Geldiniz", JLabel.CENTER);
-        lblBaslik.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        // --- BAŞLIK ---
+        JLabel lblBaslik = new JLabel("Sisteme Giriş", SwingConstants.CENTER);
+        lblBaslik.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblBaslik.setForeground(new Color(44, 62, 80));
         anaPanel.add(lblBaslik, BorderLayout.NORTH);
 
-        JPanel formPanel = new JPanel(new GridBagLayout());
+        // --- FORM ALANI ---
+        JPanel formPanel = new JPanel(new GridLayout(4, 1, 5, 5));
         formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.insets = new Insets(5, 5, 5, 5);
-
-        gbc.gridx = 0; gbc.gridy = 0;
-        formPanel.add(new JLabel("Kullanıcı Adı:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0;
+        formPanel.add(new JLabel("Kullanıcı Adı:"));
         txtKullaniciAdi = new JTextField();
-        formPanel.add(txtKullaniciAdi, gbc);
+        txtKullaniciAdi.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        formPanel.add(txtKullaniciAdi);
 
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
-        formPanel.add(new JLabel("Şifre:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1.0;
+        formPanel.add(new JLabel("Şifre:"));
         txtSifre = new JPasswordField();
-        formPanel.add(txtSifre, gbc);
+        txtSifre.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        formPanel.add(txtSifre);
 
         anaPanel.add(formPanel, BorderLayout.CENTER);
 
-        JPanel butonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
-        butonPanel.setBackground(new Color(245, 245, 245));
+        // --- BUTONLAR PANELI ---
+        // 3 satırlı bir grid oluşturduk: Giriş, Kayıt, Şifremi Unuttum
+        JPanel butonPaneli = new JPanel(new GridLayout(3, 1, 10, 10));
+        butonPaneli.setBackground(Color.WHITE);
+        butonPaneli.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        btnGiris = new JButton("Giriş Yap");
-        btnGiris.setBackground(new Color(52, 152, 219));
+        JButton btnGiris = new JButton("Giriş Yap");
+        btnGiris.setBackground(new Color(46, 204, 113));
         btnGiris.setForeground(Color.WHITE);
-        butonPanel.add(btnGiris);
+        btnGiris.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnGiris.setFocusPainted(false);
+        btnGiris.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnGiris.addActionListener(e -> girisYap());
 
-        btnKayitOl = new JButton("Kayıt Ol");
-        butonPanel.add(btnKayitOl);
-        anaPanel.add(butonPanel, BorderLayout.SOUTH);
-
-        // --- BUTON OLAYLARI ---
-
-        // 1. Kayıt Ol Butonuna Basınca Kayıt Ekranını Aç
-        btnKayitOl.addActionListener(e -> {
-            new KayitEkrani().setVisible(true);
+        JButton btnKayit = new JButton("Yeni Hesap Oluştur");
+        btnKayit.setBackground(new Color(52, 152, 219));
+        btnKayit.setForeground(Color.WHITE);
+        btnKayit.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnKayit.setFocusPainted(false);
+        btnKayit.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnKayit.addActionListener(e -> {
+            new KayitEkrani().setVisible(true); // Senin sistemdeki kayıt ekranı
             dispose();
         });
 
-        // 2. Giriş Yap Butonuna Basınca Veritabanında Kontrol Et
-        btnGiris.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String kAdi = txtKullaniciAdi.getText();
-                String sifre = new String(txtSifre.getPassword());
+        // YENİLİK: Şifremi Unuttum Butonu (Sade ve şık)
+        JButton btnSifremiUnuttum = new JButton("Şifremi Unuttum");
+        btnSifremiUnuttum.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnSifremiUnuttum.setForeground(new Color(127, 140, 141));
+        btnSifremiUnuttum.setContentAreaFilled(false);
+        btnSifremiUnuttum.setBorderPainted(false);
+        btnSifremiUnuttum.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-                String sql = "SELECT * FROM Kullanicilar WHERE kullanici_adi = ? AND sifre = ?";
+        // Tıklanınca yeni yaptığımız sınıfı çağırır
+        btnSifremiUnuttum.addActionListener(e -> new SifremiUnuttumEkrani().setVisible(true));
 
-                try (Connection conn = VeritabaniBaglantisi.baglan();
-                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        // Butonları sırayla panele ekliyoruz
+        butonPaneli.add(btnGiris);
+        butonPaneli.add(btnKayit);
+        butonPaneli.add(btnSifremiUnuttum);
 
-                    pstmt.setString(1, kAdi);
-                    pstmt.setString(2, sifre);
-                    ResultSet rs = pstmt.executeQuery();
+        anaPanel.add(butonPaneli, BorderLayout.SOUTH);
+    }
 
-                    if(rs.next()) {
-                        String rol = rs.getString("rol");
+    private void girisYap() {
+        String kullaniciAdi = txtKullaniciAdi.getText();
+        String sifre = new String(txtSifre.getPassword());
 
-                        // İŞTE BAĞLADIĞIMIZ YER BURASI YİĞİT:
-                        // Giriş başarılı olunca yeni oluşturduğumuz AnaEkran'ı açıyoruz
-                        new AnaEkran(kAdi, rol).setVisible(true);
-                        dispose();
+        if (kullaniciAdi.isEmpty() || sifre.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Lütfen alanları doldurun!");
+            return;
+        }
 
-                    } else {
-                        JOptionPane.showMessageDialog(null, "Hatalı Kullanıcı Adı veya Şifre!");
-                    }
+        String sql = "SELECT rol FROM Kullanicilar WHERE kullanici_adi = ? AND sifre = ?";
 
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(null, "Veritabanı Hatası: " + ex.getMessage());
+        try (Connection conn = VeritabaniBaglantisi.baglan();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, kullaniciAdi);
+            pstmt.setString(2, sifre);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String rol = rs.getString("rol");
+                    new AnaEkran(kullaniciAdi, rol).setVisible(true);
+                    dispose();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Kullanıcı adı veya şifre hatalı!");
                 }
             }
-        });
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Veritabanı Hatası: " + ex.getMessage());
+        }
     }
 }

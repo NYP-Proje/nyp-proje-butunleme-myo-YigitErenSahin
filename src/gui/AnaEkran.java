@@ -93,16 +93,12 @@ public class AnaEkran extends JFrame {
         btnHesapSil.setFocusPainted(false);
         btnHesapSil.addActionListener(e -> hesabiSil());
 
-        JButton btnCikis = new JButton("Çıkış Yap");
+        JButton btnCikis = new JButton("Pencereyi Kapat"); // Çıkış yap yerine pencere kapat dedik (çoklu hesap testi için)
         btnCikis.setBackground(new Color(231, 76, 60));
         btnCikis.setForeground(Color.WHITE);
         btnCikis.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnCikis.setFocusPainted(false);
-        btnCikis.addActionListener(e -> {
-            try { if(globalConn != null) globalConn.close(); } catch(Exception ignored){}
-            new GirisEkrani().setVisible(true);
-            dispose();
-        });
+        btnCikis.addActionListener(e -> dispose()); // Sadece bu kullanıcının ekranı kapanır
 
         if(!isAdmin) altMenuPaneli.add(btnHesapSil);
         altMenuPaneli.add(btnCikis);
@@ -169,12 +165,25 @@ public class AnaEkran extends JFrame {
 
         btnYenile.addActionListener(e -> urunleriVeritabanindanGetir());
 
+        // YENİLİK: SATICI VE KENDİ İLANI TEKLİF ENGELİ!
         btnTeklifVer.addActionListener(e -> {
             int seciliSatir = urunTablosu.getSelectedRow();
             if (seciliSatir == -1) {
                 JOptionPane.showMessageDialog(this, "Lütfen teklif vermek için tablodan bir ürün seçin!");
                 return;
             }
+
+            String ilanSahibi = (String) tabloModeli.getValueAt(seciliSatir, 3);
+            if (ilanSahibi.equals("@" + aktifKullanici)) {
+                JOptionPane.showMessageDialog(this, "Güvenlik Politikası: Kendi açtığınız ilana teklif veremezsiniz!");
+                return;
+            }
+
+            if (aktifRol.equals("SATICI") && !isAdmin) {
+                JOptionPane.showMessageDialog(this, "Yetki Sınırı: Satıcı rolündeki kullanıcılar açık artırmalara katılamaz, sadece ilan açabilir!");
+                return;
+            }
+
             String durum = (String) tabloModeli.getValueAt(seciliSatir, 6);
             if (durum.equals("SÜRE DOLDU") || durum.equals("KAPANDI")) {
                 JOptionPane.showMessageDialog(this, "Süresi bitmiş bir ürüne teklif veremezsiniz!");
@@ -251,7 +260,6 @@ public class AnaEkran extends JFrame {
                 pstmt.setString(1, aktifKullanici);
                 pstmt.executeUpdate();
                 dispose();
-                new GirisEkrani().setVisible(true);
             } catch(Exception ex) {}
         }
     }
@@ -350,7 +358,7 @@ public class AnaEkran extends JFrame {
     }
 
     // =========================================================================
-    // YENİLİK: GELİŞMİŞ ADMİN DENETİM MASASI PANELİ (INNER CLASS)
+    // GELİŞMİŞ ADMİN DENETİM MASASI PANELİ (INNER CLASS)
     // =========================================================================
     private class AdminYonetimPaneli extends JDialog {
         private JTable kullanıcıTablosu;
@@ -363,7 +371,6 @@ public class AnaEkran extends JFrame {
             setLocationRelativeTo(anaPencere);
             setLayout(new BorderLayout(15, 15));
 
-            // Üst Başlık Panel
             JPanel pnlBaslik = new JPanel(new BorderLayout());
             pnlBaslik.setBackground(new Color(155, 89, 182));
             pnlBaslik.setBorder(new EmptyBorder(15, 20, 15, 20));
@@ -373,7 +380,6 @@ public class AnaEkran extends JFrame {
             pnlBaslik.add(lblBaslik, BorderLayout.CENTER);
             add(pnlBaslik, BorderLayout.NORTH);
 
-            // Orta Kısım SplitPane (Sol: Tablo, Sağ: İstihbarat/Detay Alanı)
             kulModel = new DefaultTableModel(new String[]{"ID", "Kullanıcı Adı", "Sistem Rolü"}, 0){
                 @Override
                 public boolean isCellEditable(int r, int c) { return false; }
@@ -382,7 +388,6 @@ public class AnaEkran extends JFrame {
             kullanıcıTablosu.setRowHeight(30);
             kullanıcıTablosu.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-            // Kullanıcı seçildiğinde hareketlerini anlık dökme motoru
             kullanıcıTablosu.getSelectionModel().addListSelectionListener(e -> {
                 if(!e.getValueIsAdjusting()) kullanıcıGecmisiniYukle();
             });
@@ -402,7 +407,6 @@ public class AnaEkran extends JFrame {
             splitPane.setDividerLocation(420);
             add(splitPane, BorderLayout.CENTER);
 
-            // Alt Aksiyon Butonları
             JPanel pnlButonlar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
 
             JButton btnGuncelle = new JButton("✏️ Kullanıcı Adı Düzelt");
@@ -448,7 +452,6 @@ public class AnaEkran extends JFrame {
             rapor.append("=== KULLANICI ETKİNLİK RAPORU ===\n");
             rapor.append("Hedef: @").append(kadi).append(" (ID: ").append(uid).append(")\n\n");
 
-            // 1. Eklediği İlanlar
             rapor.append("📦 Açtığı İlanlar:\n");
             String sqlIlan = "SELECT id, urun_adi, mevcut_fiyat, durum FROM Urunler WHERE satici_id = ?";
             try (PreparedStatement pstmt = globalConn.prepareStatement(sqlIlan)) {
@@ -465,7 +468,6 @@ public class AnaEkran extends JFrame {
                 if(!buldu) rapor.append(" - Henüz ilan açmamış.\n");
             } catch(Exception ex){}
 
-            // 2. Kazandığı Ürünler
             rapor.append("\n💼 Satın Aldığı/Kazandığı Ürünler:\n");
             String sqlKazan = "SELECT id, urun_adi, mevcut_fiyat FROM Urunler WHERE son_teklif_veren = ? AND durum = 'KAPANDI'";
             try (PreparedStatement pstmt = globalConn.prepareStatement(sqlKazan)) {
@@ -479,7 +481,6 @@ public class AnaEkran extends JFrame {
                 if(!buldu) rapor.append(" - Henüz kazandığı bir ilan yok.\n");
             } catch(Exception ex){}
 
-            // 3. Verdiği Teklif Hareketi
             rapor.append("\n💬 Verdiği Son Teklif Hareketleri:\n");
             String sqlTeklif = "SELECT id, urun_adi, mevcut_fiyat, son_teklif_veren FROM Urunler WHERE son_teklif_veren = ?";
             try (PreparedStatement pstmt = globalConn.prepareStatement(sqlTeklif)) {
@@ -508,14 +509,12 @@ public class AnaEkran extends JFrame {
             String yeniAd = JOptionPane.showInputDialog(this, "@" + eskiAd + " kullanıcısı için yeni ve uygun bir isim girin:", eskiAd);
             if(yeniAd != null && !yeniAd.trim().isEmpty()) {
                 try {
-                    // Kullanıcılar tablosunu güncelle
                     String sql = "UPDATE Kullanicilar SET kullanici_adi = ? WHERE id = ?";
                     try (PreparedStatement pstmt = globalConn.prepareStatement(sql)) {
                         pstmt.setString(1, yeniAd.trim());
                         pstmt.setInt(2, uid);
                         pstmt.executeUpdate();
                     }
-                    // Ürünler tablosundaki lider teklif veren ismini de güncelle ki sistem kırılmasın
                     String sqlUrun = "UPDATE Urunler SET son_teklif_veren = ? WHERE son_teklif_veren = ?";
                     try (PreparedStatement pstmt2 = globalConn.prepareStatement(sqlUrun)) {
                         pstmt2.setString(1, yeniAd.trim());
@@ -544,12 +543,10 @@ public class AnaEkran extends JFrame {
             int onay = JOptionPane.showConfirmDialog(this, "🚨 @" + kadi + " kullanıcısını ve ona ait tüm ilanları silerek sistemden tamamen banlamak istiyor musunuz?", "Kullanıcı Banlama", JOptionPane.YES_NO_OPTION);
             if(onay == JOptionPane.YES_OPTION) {
                 try {
-                    // Adım 1: Kullanıcının açtığı ilanları sil
                     try (PreparedStatement p1 = globalConn.prepareStatement("DELETE FROM Urunler WHERE satici_id = ?")) {
                         p1.setInt(1, uid);
                         p1.executeUpdate();
                     }
-                    // Adım 2: Kullanıcıyı sil
                     try (PreparedStatement p2 = globalConn.prepareStatement("DELETE FROM Kullanicilar WHERE id = ?")) {
                         p2.setInt(1, uid);
                         p2.executeUpdate();

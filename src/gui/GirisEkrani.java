@@ -1,7 +1,6 @@
 package gui;
 
 import database.VeritabaniBaglantisi;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -15,7 +14,7 @@ public class GirisEkrani extends JFrame {
 
     public GirisEkrani() {
         setTitle("Açık Artırma Sistemi - Giriş");
-        setSize(400, 480); // Butonlar rahat sığsın diye biraz uzattık
+        setSize(400, 480);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -24,13 +23,11 @@ public class GirisEkrani extends JFrame {
         anaPanel.setBackground(Color.WHITE);
         setContentPane(anaPanel);
 
-        // --- BAŞLIK ---
         JLabel lblBaslik = new JLabel("Sisteme Giriş", SwingConstants.CENTER);
         lblBaslik.setFont(new Font("Segoe UI", Font.BOLD, 26));
         lblBaslik.setForeground(new Color(44, 62, 80));
         anaPanel.add(lblBaslik, BorderLayout.NORTH);
 
-        // --- FORM ALANI ---
         JPanel formPanel = new JPanel(new GridLayout(4, 1, 5, 5));
         formPanel.setBackground(Color.WHITE);
 
@@ -46,8 +43,6 @@ public class GirisEkrani extends JFrame {
 
         anaPanel.add(formPanel, BorderLayout.CENTER);
 
-        // --- BUTONLAR PANELI ---
-        // 3 satırlı bir grid oluşturduk: Giriş, Kayıt, Şifremi Unuttum
         JPanel butonPaneli = new JPanel(new GridLayout(3, 1, 10, 10));
         butonPaneli.setBackground(Color.WHITE);
         butonPaneli.setBorder(new EmptyBorder(10, 0, 0, 0));
@@ -67,22 +62,17 @@ public class GirisEkrani extends JFrame {
         btnKayit.setFocusPainted(false);
         btnKayit.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnKayit.addActionListener(e -> {
-            new KayitEkrani().setVisible(true); // Senin sistemdeki kayıt ekranı
-            dispose();
+            new KayitEkrani().setVisible(true);
         });
 
-        // YENİLİK: Şifremi Unuttum Butonu (Sade ve şık)
         JButton btnSifremiUnuttum = new JButton("Şifremi Unuttum");
         btnSifremiUnuttum.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnSifremiUnuttum.setForeground(new Color(127, 140, 141));
         btnSifremiUnuttum.setContentAreaFilled(false);
         btnSifremiUnuttum.setBorderPainted(false);
         btnSifremiUnuttum.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Tıklanınca yeni yaptığımız sınıfı çağırır
         btnSifremiUnuttum.addActionListener(e -> new SifremiUnuttumEkrani().setVisible(true));
 
-        // Butonları sırayla panele ekliyoruz
         butonPaneli.add(btnGiris);
         butonPaneli.add(btnKayit);
         butonPaneli.add(btnSifremiUnuttum);
@@ -91,8 +81,8 @@ public class GirisEkrani extends JFrame {
     }
 
     private void girisYap() {
-        String kullaniciAdi = txtKullaniciAdi.getText();
-        String sifre = new String(txtSifre.getPassword());
+        String kullaniciAdi = txtKullaniciAdi.getText().trim();
+        String sifre = new String(txtSifre.getPassword()).trim();
 
         if (kullaniciAdi.isEmpty() || sifre.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Lütfen alanları doldurun!");
@@ -110,8 +100,13 @@ public class GirisEkrani extends JFrame {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     String rol = rs.getString("rol");
+
+                    // Ana ekranı açıyoruz ama giriş ekranını kapatmıyoruz (dispose yok)
                     new AnaEkran(kullaniciAdi, rol).setVisible(true);
-                    dispose();
+
+                    // İkinci hesap girişi için kutuları temizliyoruz
+                    txtKullaniciAdi.setText("");
+                    txtSifre.setText("");
                 } else {
                     JOptionPane.showMessageDialog(this, "Kullanıcı adı veya şifre hatalı!");
                 }

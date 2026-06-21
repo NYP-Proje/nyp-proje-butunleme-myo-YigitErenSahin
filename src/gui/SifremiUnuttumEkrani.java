@@ -1,7 +1,6 @@
 package gui;
 
 import database.VeritabaniBaglantisi;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -18,20 +17,18 @@ public class SifremiUnuttumEkrani extends JFrame {
         setTitle("Şifremi Unuttum / Yenile");
         setSize(380, 320);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Sadece bu pencereyi kapatır
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel anaPanel = new JPanel(new BorderLayout(10, 10));
         anaPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         anaPanel.setBackground(Color.WHITE);
         setContentPane(anaPanel);
 
-        // Başlık alanı
         JLabel lblBaslik = new JLabel("Şifre Yenileme Paneli", SwingConstants.CENTER);
         lblBaslik.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblBaslik.setForeground(new Color(44, 62, 80));
         anaPanel.add(lblBaslik, BorderLayout.NORTH);
 
-        // Form Alanı
         JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 15));
         formPanel.setBackground(Color.WHITE);
 
@@ -49,7 +46,6 @@ public class SifremiUnuttumEkrani extends JFrame {
 
         anaPanel.add(formPanel, BorderLayout.CENTER);
 
-        // Şifre Güncelleme Butonu
         JButton btnGuncelle = new JButton("Şifremi Güncelle");
         btnGuncelle.setBackground(new Color(52, 152, 219));
         btnGuncelle.setForeground(Color.WHITE);
@@ -71,12 +67,17 @@ public class SifremiUnuttumEkrani extends JFrame {
             return;
         }
 
+        // YENİLİK: Minimum 6 karakter kontrolü
+        if (yeniSifre.length() < 6) {
+            JOptionPane.showMessageDialog(this, "Güvenlik Uyarısı: Yeni şifreniz en az 6 karakterden oluşmalıdır!");
+            return;
+        }
+
         if (!yeniSifre.equals(yeniSifreTekrar)) {
             JOptionPane.showMessageDialog(this, "Girdiğiniz şifreler birbiriyle uyuşmuyor!");
             return;
         }
 
-        // Önce kullanıcı var mı diye kontrol ediyoruz, varsa şifresini güncelliyoruz
         String kontrolSql = "SELECT id FROM Kullanicilar WHERE kullanici_adi = ?";
         String guncelleSql = "UPDATE Kullanicilar SET sifre = ? WHERE kullanici_adi = ?";
 
@@ -91,14 +92,13 @@ public class SifremiUnuttumEkrani extends JFrame {
                 }
             }
 
-            // Kullanıcı bulundu, şimdi şifreyi değiştirelim
             try (PreparedStatement guncellePstmt = conn.prepareStatement(guncelleSql)) {
                 guncellePstmt.setString(1, yeniSifre);
                 guncellePstmt.setString(2, kullaniciAdi);
                 guncellePstmt.executeUpdate();
 
                 JOptionPane.showMessageDialog(this, "Şifreniz başarıyla güncellendi! Yeni şifrenizle giriş yapabilirsiniz.");
-                dispose(); // Pencereyi kapat
+                dispose();
             }
 
         } catch (Exception ex) {
